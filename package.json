@@ -3,30 +3,44 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run setup -- --quiet && concurrently -n web,worker -c \"#6750A4,#386A20\" \"next dev\" \"npm run worker\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint app components lib scripts types worker next.config.ts tailwind.config.ts --ext .js,.jsx,.ts,.tsx",
+    "worker": "tsx worker/index.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "tsx --no-warnings scripts/setup.ts --migrate-only",
+    "setup": "prisma generate && tsx --no-warnings scripts/setup.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
     "framer-motion": "^11.3.19",
-    "next": "15.0.0",
-    "openai": "^4.77.0",
+    "lucide-react": "^1.14.0",
+    "next": "^15.5.15",
+    "openai": "^6.35.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-dropzone": "^14.2.9",
-    "tailwind-merge": "^2.5.2"
+    "tailwind-merge": "^2.5.2",
+    "zod": "^4.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
-    "eslint-config-next": "15.0.0",
+    "eslint-config-next": "^15.5.15",
     "postcss": "^8.4.49",
+    "prisma": "^6.19.3",
     "tailwindcss": "^3.4.14",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }

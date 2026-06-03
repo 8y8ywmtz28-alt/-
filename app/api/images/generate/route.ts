@@ -1,21 +1,70 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
-import { saveBase64Image } from "@/lib/save-image";
+import { prisma } from "@/lib/prisma";
+import { generationSchema } from "@/lib/validation";
+import { getAppSettings } from "@/lib/settings";
+import { serializeBatch, serializeJob } from "@/lib/serializers";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: "OPENAI_API_KEY 缺失" }, { status: 500 });
-    const { prompt, size, quality, output_format } = await req.json();
-    if (!prompt) return NextResponse.json({ error: "prompt 不能为空" }, { status: 400 });
+    const settings = await getAppSettings();
+    if (!settings.hasApiKey) {
+      return NextResponse.json({ error: "缺少 OPENAI_API_KEY，请先完成初始化配置" }, { status: 428 });
+    }
 
-    const result = await openai.images.generate({ model: "gpt-image-2", prompt, size, quality, output_format });
-    const b64 = result.data?.[0]?.b64_json;
-    if (!b64) return NextResponse.json({ error: "模型未返回图片" }, { status: 500 });
-    const url = await saveBase64Image(b64, output_format || "png");
+    const json = (await req.json()) as unknown;
+    const parsed = generationSchema.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "参数不合法" }, { status: 400 });
+    }
 
-    return NextResponse.json({ image: { id: crypto.randomUUID(), url, prompt, createdAt: new Date().toISOString(), size, quality, format: output_format } });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "生成失败";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const prompts = parsed.data.prompts?.length ? parsed.data.prompts : parsed.data.prompt ? [parsed.data.prompt] : [];
+    if (prompts.length === 0) {
+      return NextResponse.json({ error: "请输入 prompt" }, { status: 400 });
+    }
+
+    const batch = await prisma.generationBatch.create({
+      data: {
+        name: parsed.data.batchName || (prompts.length > 1 ? `批量生成 ${new Date().toLocaleString("zh-CN")}` : prompts[0].slice(0, 42)),
+        mode: prompts.length > 1 || parsed.data.count > 1 ? "batch" : "single",
+        promptCount: prompts.length,
+        imagesPerPrompt: parsed.data.count,
+      },
+    });
+
+    const jobs = [];
+    for (const prompt of prompts) {
+      for (let index = 0; index < parsed.data.count; index += 1) {
+        const job = await prisma.generationJob.create({
+          data: {
+            type: "generate",
+            prompt,
+            batchId: batch.id,
+            paramsJson: JSON.stringify({
+              size: parsed.data.size,
+              quality: parsed.data.quality,
+              output_format: parsed.data.output_format,
+            }),
+            logs: { create: { message: "任务已加入本地队列" } },
+          },
+        });
+        jobs.push(job);
+      }
+    }
+
+    const withJobs = await prisma.generationBatch.findUnique({
+      where: { id: batch.id },
+      include: { jobs: true, images: true },
+    });
+
+    return NextResponse.json({
+      batch: withJobs ? serializeBatch(withJobs) : serializeBatch(batch),
+      jobs: jobs.map(serializeJob),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "创建生成任务失败";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

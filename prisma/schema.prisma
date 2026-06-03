@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GenerationBatch {
+  id              String          @id @default(cuid())
+  name            String
+  mode            String          @default("single")
+  status          String          @default("queued")
+  promptCount     Int             @default(1)
+  imagesPerPrompt Int             @default(1)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  jobs            GenerationJob[]
+  images          ImageAsset[]
+}
+
+model GenerationJob {
+  id                 String           @id @default(cuid())
+  type               String
+  status             String           @default("queued")
+  prompt             String
+  paramsJson         String           @default("{}")
+  referenceImageUrls String           @default("[]")
+  resultImageIds     String           @default("[]")
+  error              String?
+  attempts           Int              @default(0)
+  maxAttempts        Int              @default(2)
+  batchId            String?
+  conversationId     String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  startedAt          DateTime?
+  completedAt        DateTime?
+  canceledAt         DateTime?
+  batch              GenerationBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  conversation       Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  images             ImageAsset[]
+  logs               QueueLog[]
+
+  @@index([status, createdAt])
+  @@index([batchId])
+  @@index([conversationId])
+}
+
+model ImageAsset {
+  id             String                @id @default(cuid())
+  url            String
+  filePath       String
+  kind           String                @default("generated")
+  prompt         String?
+  paramsJson     String                @default("{}")
+  size           String?
+  quality        String?
+  format         String?
+  batchId        String?
+  conversationId String?
+  jobId          String?
+  sourceImageId  String?
+  createdAt      DateTime              @default(now())
+  batch          GenerationBatch?      @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  conversation   Conversation?         @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  job            GenerationJob?        @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  sourceImage    ImageAsset?           @relation("SourceImage", fields: [sourceImageId], references: [id], onDelete: SetNull)
+  derivatives    ImageAsset[]          @relation("SourceImage")
+  messages       ConversationMessage[]
+
+  @@index([createdAt])
+  @@index([batchId])
+  @@index([conversationId])
+  @@index([jobId])
+}
+
+model Conversation {
+  id                 String                @id @default(cuid())
+  title              String
+  previousResponseId String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  messages           ConversationMessage[]
+  jobs               GenerationJob[]
+  images             ImageAsset[]
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  imageAssetId   String?
+  responseId     String?
+  metadataJson   String       @default("{}")
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  imageAsset     ImageAsset?  @relation(fields: [imageAssetId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+}
+
+model QueueLog {
+  id        String        @id @default(cuid())
+  jobId     String
+  level     String        @default("info")
+  message   String
+  metaJson  String        @default("{}")
+  createdAt DateTime      @default(now())
+  job       GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}

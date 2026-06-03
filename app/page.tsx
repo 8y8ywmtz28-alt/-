@@ -1,5 +1,9 @@
-import { ImageStudio } from "@/components/ImageStudio";
+import { redirect } from "next/navigation";
+import { hasConfiguredApiKey } from "@/lib/settings";
+import { StudioApp } from "@/components/studio/StudioApp";
 
-export default function Home() {
-  return <ImageStudio />;
+export default async function Home() {
+  const ready = await hasConfiguredApiKey();
+  if (!ready) redirect("/setup");
+  return <StudioApp />;
 }
