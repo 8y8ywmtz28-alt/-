@@ -3,21 +3,128 @@
 @tailwind utilities;
 
 :root {
-  --background: 222 47% 7%;
-  --foreground: 210 40% 98%;
-  --card: 224 39% 10%;
-  --card-foreground: 210 40% 98%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 210 40% 98%;
-  --muted: 220 20% 16%;
-  --muted-foreground: 220 10% 70%;
-  --border: 220 14% 24%;
-  --input: 220 14% 24%;
-  --ring: 217 91% 60%;
-  --radius: 0.9rem;
+  color-scheme: light;
+  --background: 252 247 255;
+  --foreground: 29 27 32;
+  --surface: 255 251 254;
+  --surface-container: 243 237 247;
+  --surface-container-high: 236 230 240;
+  --surface-container-highest: 230 224 233;
+  --primary: 103 80 164;
+  --primary-foreground: 255 255 255;
+  --secondary: 82 89 126;
+  --secondary-container: 224 224 255;
+  --tertiary: 0 104 116;
+  --error: 179 38 30;
+  --outline: 121 116 126;
+  --border: 202 196 208;
+  --muted: 73 69 79;
+  --muted-foreground: 98 91 113;
+  --card: 255 251 254;
+  --card-foreground: 29 27 32;
+  --input: 202 196 208;
+  --ring: 103 80 164;
+  --shadow: 31 31 31;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 20 18 24;
+  --foreground: 230 224 233;
+  --surface: 20 18 24;
+  --surface-container: 33 31 38;
+  --surface-container-high: 43 41 48;
+  --surface-container-highest: 54 52 59;
+  --primary: 208 188 255;
+  --primary-foreground: 56 30 114;
+  --secondary: 200 200 238;
+  --secondary-container: 58 65 102;
+  --tertiary: 112 219 229;
+  --error: 242 184 181;
+  --outline: 147 143 153;
+  --border: 73 69 79;
+  --muted: 202 196 208;
+  --muted-foreground: 202 196 208;
+  --card: 33 31 38;
+  --card-foreground: 230 224 233;
+  --input: 73 69 79;
+  --ring: 208 188 255;
+  --shadow: 0 0 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: rgb(var(--background));
 }
 
 body {
-  @apply bg-background text-foreground antialiased;
-  background-image: radial-gradient(circle at top right, rgba(56, 189, 248, 0.15), transparent 35%);
+  min-height: 100vh;
+  margin: 0;
+  color: rgb(var(--foreground));
+  background:
+    radial-gradient(circle at 20% 0%, rgba(var(--primary), 0.16), transparent 32rem),
+    radial-gradient(circle at 90% 8%, rgba(var(--tertiary), 0.12), transparent 30rem),
+    rgb(var(--background));
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.md-surface {
+  background: rgba(var(--surface-container), 0.78);
+  border: 1px solid rgba(var(--border), 0.55);
+  box-shadow: 0 18px 45px rgba(var(--shadow), 0.12);
+  backdrop-filter: blur(22px);
+}
+
+.md-card {
+  background: rgb(var(--surface-container));
+  border: 1px solid rgba(var(--border), 0.5);
+  box-shadow: 0 12px 30px rgba(var(--shadow), 0.1);
+}
+
+.md-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.md-ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.md-ripple:hover::after {
+  opacity: 0.08;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(var(--surface-container-highest), 0.55), rgba(var(--primary), 0.14), rgba(var(--surface-container-highest), 0.55));
+  background-size: 220% 100%;
+  animation: shimmer 1.7s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 220% 0;
+  }
+  100% {
+    background-position: -220% 0;
+  }
 }
